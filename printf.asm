@@ -1,7 +1,7 @@
-global main
-
 
 section .text
+
+global _start
 
 
 BUFFER_CAPACITY equ 512
@@ -13,71 +13,120 @@ BUFFER_CAPACITY equ 512
 ;	Prints data in chuncks of 512 bytes.
 ;	Supports following specifiers:
 ;		%c - print out integer, represented as a char
-;		%s - string, \0 is expected at the end of the string
+;	!	%s - string, \0 is expected at the end of the string
 ;		%% - print out % sign
-;  		%d - print out decimal     representation of an integer
-;		%x - print out hexademical representation of an integer
-;		%o - print out octagon     representation of an integer
-;		%b - print out binary      representation of an integer
+;  	!	%d - print out decimal     representation of an integer
+;	!	%x - print out hexademical representation of an integer
+;	!	%o - print out octagon     representation of an integer
+;	!	%b - print out binary      representation of an integer
 ;
 ; Registers: 
 ;	RDI - pointer to the string to be formatted and printed
 ;	RSI, RDX, RCX, R8, R9 and stack - arguments
 ;	R10 - current position of the buffer
 ;	R11 - current position in the string
+;	R12 - used arguments
 ;
-;
-main:
-		push rbx ; save registers for the calling convention 
+_start:		push rbx
 		push rsp
 		push rbp
-		push r10 
-		push r11
+		push r12
+		mov rbp, rsp
+		add rbp, 0x20
 ;-------------------------------------------------------------------
-				
+		xor r10, r10
+		xor r11, r11
+		xor r12, r12
 
-
-
+.Cmp:		cmp byte [rdi + r11], 0
+		je .endProg
+		call parseAndPut
+		inc r11
+		inc r10
+		jmp .Cmp
 
 ;-------------------------------------------------------------------
-; restore registers values as the convention says
+; print remaining info, restore registers values and end the programm
 ;-------------------------------------------------------------------
-		pop r11
-		pop r10
+
+.endProg:	call ReleaseBuffer
+
+		pop r12
+		pop rbp
 		pop rsp
-		pop rbx ; restore rbx value
-		ret
+		pop rbx
+		mov rax, 0x3C
+		xor rdi, rdi
+		syscall
 
 
 
 ;
 ; Description:
-;	Acts the same as putchar, but checks buffer if it's overflowed
+;	Check for % specifiers and checks buffer if it's overflowed
+; Modifies:
+;	rax = smth_i_dont_know_everything_Changes
 ;
-putCharCheck:
-		call putchar
-		call checkBufferOverflow
+parseAndPut:    mov al, byte [rdi + r11]
+		cmp al, '%'
+		je parseSpecifier
+
+.putchar:	call putCharCheck
 		ret
+
+parseSpecifier: inc r11
+		mov al, byte [rdi + r11]
+		cmp al, '%'
+
+		je putCharCheck
+
+		cmp al, 'c'
+		call nextArgument
+		mov al, bl
+		jmp putCharCheck
 		
 
 
+		
+
+nextArgument:	cmp r12, 5
+		jge .stackArgument
+		cmp r12, 0
+		cmove rbx, rsi
+		cmp r12, 1
+		cmove rbx, rdx
+		cmp r12, 2
+		cmove rbx, rcx
+		cmp r12, 3
+		cmove rbx, r8
+		cmp r12, 4
+		cmove rbx, r9
+		jmp .endArgument
+		
+.stackArgument:	add r12, rbp
+		mov rbx, [r12 - 5]
+		sub r12, rbp
+.endArgument:	inc r12
+		ret
+
+
+putCharCheck:	call putchar
+		call checkBufferOverflow
+		ret
+
 ;
 ; Description:
-;	Puts a byte in string[r10] into Buffer[r11]
+;	Puts a char from rax into Buffer[r11]
 ;
 ; Pseudo:
-; 	Buffer[R10] = String[R11]
+; 	Buffer[R10] = al
 ;
-putchar:
-		push rbx
-		mov bl, byte[rdi, r11]
-		mov byte [Buffer + r10], bl
-		pop rbx
+putchar:	mov byte [Buffer + r10], al
 		ret
 
 
 
-;		
+;
 ; Description:
 ;	checks if buffer is overflowed, prints and flushes it if so
 ;
@@ -116,8 +165,7 @@ checkBufferOverflow:
 ;	print(Buffer[:r10]);
 ;
 
-ReleaseBuffer:
-		mov rax, 0x1
+ReleaseBuffer:	mov rax, 0x1
 		mov rdi, 1
 		mov rsi, Buffer
 		mov rdx, r10
@@ -131,10 +179,13 @@ ReleaseBuffer:
 ; Pseudo:
 ;	R10 = 0;
 ;
-Flush:
-		mov r10, 0
+Flush:		mov r10, 0
 		ret
 
+
+section .data
+
+String 		db "Hello %c%c%c%c%c%c%cworld%%%%", 0
 
 section .bss
 
