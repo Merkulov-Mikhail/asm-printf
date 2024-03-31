@@ -17,8 +17,8 @@ BUFFER_CAPACITY equ 512
 ;		%% - print out % sign
 ;  		%d - print out decimal     representation of an integer
 ;		%x - print out hexademical representation of an integer
-;	!	%o - print out octagon     representation of an integer
-;	!	%b - print out binary      representation of an integer
+;		%o - print out octagon     representation of an integer
+;		%b - print out binary      representation of an integer
 ;
 ; Registers: 
 ;	RDI - pointer to the string to be formatted and printed
@@ -31,11 +31,11 @@ _start:		push rbx
 		push rsp
 		push rbp
 		push r12
-		mov rsi, 0xf
-		mov rdx, 0
-		mov rcx, 0x5
-		mov r8, 0x255
-		mov r9, 534953400
+		mov rsi, 251
+		mov rdx, 252
+		mov rcx, 253
+		mov r8, 255
+		mov r9, 256
 		mov rbp, rsp
 		mov rdi, String
 		add rbp, 0x20
@@ -101,11 +101,34 @@ parseSpecifier: inc r11
 		jne .l3
 		call nextArgument
 		mov rax, rbx
-		jmp putHex
+		mov rbx, 0x4
+		jmp putInDifSys
 
-.l3:
+.l3:		cmp al, 'o'
+		jne .l4
+		call nextArgument
+		mov rax, rbx
+		mov rbx, 0x3
+		jmp putInDifSys
+
+.l4:		cmp al, 'b'
+		jne .l5
+		call nextArgument
+		mov rax, rbx
+		mov rbx, 0x1
+		jmp putInDifSys
+
+.l5:		cmp al, 's'
+		jne .l6
+		call nextArgument
+		jmp callString
+
+.l6:
 		ret	
 
+
+
+callString: ret
 
 		
 
@@ -131,7 +154,6 @@ nextArgument:	cmp r12, 5
 
 
 putDecimal:	push rdx
-		push rbx
 		push rcx
 		
 		xor ecx, ecx
@@ -154,34 +176,56 @@ putDecimal:	push rdx
 		call decimalToBuf
 
 		pop rcx
-		pop rbx
 		pop rdx
 		ret
 
-
-putHex: 	push rdx
-		push rbx
+;
+; Description:
+;	writes into the output buffer rax value in system number 2**bl
+; Example:
+;	// bl = 3
+;	print(oct(rax))
+;	// bl = 4
+;	print(hex(rax))
+;	// bl = 1
+;	print(bin(rax))
+;
+putInDifSys: 	push rdx
 		push rcx
+		push r8
+		push r9
+
+		mov cl, bl
+		mov r9b, bl
+
+		xor r8, r8
+		inc r8
+		shl r8, cl
+		dec r8
 
 		xor ecx, ecx
 
 .l3:		mov bl, al
-		and bl, 0xf
+		and bl, r8b
 		call decToHex
 		mov dl, al
 		mov al, bl
 		mov byte [DigitRepr + rcx], al
 		inc rcx
 		mov al, dl
-		shr rax, 0x4
+		mov dl, cl
+		mov cl, r9b
+		shr rax, cl
+		mov cl, dl
 		test rax, rax
 		jnz .l3
 
 		dec rcx
 		call decimalToBuf
-
+	
+		pop r9
+		pop r8
 		pop rcx
-		pop rbx
 		pop rdx
 		ret
 
@@ -294,7 +338,7 @@ Flush:		mov r10, 0
 
 section .data
 
-String 		db "Hello %x %x %x %x %x world%%%%", 0
+String 		db "Hello %o %o %o %o %xh world%%%%", 0
 
 section .bss
 
