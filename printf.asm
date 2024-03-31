@@ -16,7 +16,7 @@ BUFFER_CAPACITY equ 512
 ;	!	%s - string, \0 is expected at the end of the string
 ;		%% - print out % sign
 ;  		%d - print out decimal     representation of an integer
-;	!	%x - print out hexademical representation of an integer
+;		%x - print out hexademical representation of an integer
 ;	!	%o - print out octagon     representation of an integer
 ;	!	%b - print out binary      representation of an integer
 ;
@@ -96,8 +96,14 @@ parseSpecifier: inc r11
 		call nextArgument
 		mov rax, rbx
 		jmp putDecimal		; putDecimal ends parseSpecifier
+		
+.l2:		cmp al, 'x'
+		jne .l3
+		call nextArgument
+		mov rax, rbx
+		jmp putHex
 
-.l2:		
+.l3:
 		ret	
 
 
@@ -151,6 +157,49 @@ putDecimal:	push rdx
 		pop rbx
 		pop rdx
 		ret
+
+
+putHex: 	push rdx
+		push rbx
+		push rcx
+
+		xor ecx, ecx
+
+.l3:		mov bl, al
+		and bl, 0xf
+		call decToHex
+		mov dl, al
+		mov al, bl
+		mov byte [DigitRepr + rcx], al
+		inc rcx
+		mov al, dl
+		shr rax, 0x4
+		test rax, rax
+		jnz .l3
+
+		dec rcx
+		call decimalToBuf
+
+		pop rcx
+		pop rbx
+		pop rdx
+		ret
+
+;
+; Description:
+;	moves in bl hexidemical representation of bl
+; Pseudo:
+;	bl = hex(bl) 
+;
+decToHex:	cmp bl, 0xa
+		jge .letterRepr
+		add bl, '0'
+		ret
+
+.letterRepr:	add bl, 'a'
+		sub bl, 0xa
+		ret
+
 
 ; 
 ; Description:
@@ -245,7 +294,7 @@ Flush:		mov r10, 0
 
 section .data
 
-String 		db "Hello %d %d %d %d %dworld%%%%", 0
+String 		db "Hello %x %x %x %x %x world%%%%", 0
 
 section .bss
 
