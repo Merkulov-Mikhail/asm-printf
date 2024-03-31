@@ -15,7 +15,7 @@ BUFFER_CAPACITY equ 512
 ;		%c - print out integer, represented as a char
 ;	!	%s - string, \0 is expected at the end of the string
 ;		%% - print out % sign
-;  	!	%d - print out decimal     representation of an integer
+;  		%d - print out decimal     representation of an integer
 ;	!	%x - print out hexademical representation of an integer
 ;	!	%o - print out octagon     representation of an integer
 ;	!	%b - print out binary      representation of an integer
@@ -31,7 +31,13 @@ _start:		push rbx
 		push rsp
 		push rbp
 		push r12
+		mov rsi, 0xf
+		mov rdx, 0
+		mov rcx, 0x5
+		mov r8, 0x255
+		mov r9, 534953400
 		mov rbp, rsp
+		mov rdi, String
 		add rbp, 0x20
 ;-------------------------------------------------------------------
 		xor r10, r10
@@ -77,14 +83,22 @@ parseAndPut:    mov al, byte [rdi + r11]
 parseSpecifier: inc r11
 		mov al, byte [rdi + r11]
 		cmp al, '%'
-
 		je putCharCheck
 
 		cmp al, 'c'
+		jne .l1
 		call nextArgument
 		mov al, bl
-		jmp putCharCheck
+		jmp putCharCheck	; putCharCheck ends parseSpecifier
 		
+.l1:		cmp al, 'd'
+		jne .l2
+		call nextArgument
+		mov rax, rbx
+		jmp putDecimal		; putDecimal ends parseSpecifier
+
+.l2:		
+		ret	
 
 
 		
@@ -107,6 +121,52 @@ nextArgument:	cmp r12, 5
 		mov rbx, [r12 - 5]
 		sub r12, rbp
 .endArgument:	inc r12
+		ret
+
+
+putDecimal:	push rdx
+		push rbx
+		push rcx
+		
+		xor ecx, ecx
+.l10:		mov rbx, 0xa
+		cqo
+		div rbx
+		mov rbx, rax
+		mov al, dl
+		add al, '0'
+		mov byte [DigitRepr + rcx], al
+		inc rcx
+		inc r10
+		mov rax, rbx
+		test rax, rax
+		jnz .l10	
+
+					; here rcx > 0
+		dec rcx
+
+		call decimalToBuf
+
+		pop rcx
+		pop rbx
+		pop rdx
+		ret
+
+; 
+; Description:
+;	Unloads DigitRepr buffer to the output buffer
+; Assumes:
+;	rcx - amount of digits in DigitRepr
+; Modifies:
+;	r10 += rcx + 1
+;	rcx = -1
+;
+decimalToBuf:	mov al, byte [DigitRepr + rcx]
+		call putCharCheck
+		inc r10
+		dec rcx
+		test rcx, rcx 
+		jns decimalToBuf
 		ret
 
 
@@ -185,8 +245,9 @@ Flush:		mov r10, 0
 
 section .data
 
-String 		db "Hello %c%c%c%c%c%c%cworld%%%%", 0
+String 		db "Hello %d %d %d %d %dworld%%%%", 0
 
 section .bss
 
 Buffer		resb BUFFER_CAPACITY
+DigitRepr	resb 64 
