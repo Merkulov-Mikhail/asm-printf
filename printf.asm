@@ -13,7 +13,7 @@ BUFFER_CAPACITY equ 512
 ;	Prints data in chuncks of 512 bytes.
 ;	Supports following specifiers:
 ;		%c - print out integer, represented as a char
-;	!	%s - string, \0 is expected at the end of the string
+;		%s - string, \0 is expected at the end of the string
 ;		%% - print out % sign
 ;  		%d - print out decimal     representation of an integer
 ;		%x - print out hexademical representation of an integer
@@ -31,7 +31,7 @@ _start:		push rbx
 		push rsp
 		push rbp
 		push r12
-		mov rsi, 251
+		mov rsi, Another
 		mov rdx, 252
 		mov rcx, 253
 		mov r8, 255
@@ -119,17 +119,13 @@ parseSpecifier: inc r11
 		jmp putInDifSys
 
 .l5:		cmp al, 's'
-		jne .l6
+		jne .l20
 		call nextArgument
+		mov rax, rbx
 		jmp callString
 
-.l6:
+.l20:
 		ret	
-
-
-
-callString: ret
-
 		
 
 nextArgument:	cmp r12, 5
@@ -262,6 +258,17 @@ decimalToBuf:	mov al, byte [DigitRepr + rcx]
 		jns decimalToBuf
 		ret
 
+callString:	mov rbx, rax
+		jmp .compare
+.cycle:		mov al, byte [rbx]
+		call putCharCheck
+		inc r10
+		inc rbx
+.compare:	cmp byte [rbx], 0
+		jne .cycle
+
+		ret
+
 
 putCharCheck:	call putchar
 		call checkBufferOverflow
@@ -338,7 +345,8 @@ Flush:		mov r10, 0
 
 section .data
 
-String 		db "Hello %o %o %o %o %xh world%%%%", 0
+String 		db "Hello %s %o %o %o %xh world%%%%", 0
+Another		db "It was funny", 0
 
 section .bss
 
