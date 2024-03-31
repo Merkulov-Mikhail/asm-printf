@@ -102,32 +102,35 @@ parseSpecifier: inc r11
 		call nextArgument
 		mov rax, rbx
 		mov rbx, 0x4
-		jmp putInDifSys
+		jmp putInDifSys         ; putInDifSys ends parseSpecifier
 
 .l3:		cmp al, 'o'
 		jne .l4
 		call nextArgument
 		mov rax, rbx
 		mov rbx, 0x3
-		jmp putInDifSys
+		jmp putInDifSys 	; putInDifSys ends parseSpecifier
 
 .l4:		cmp al, 'b'
 		jne .l5
 		call nextArgument
 		mov rax, rbx
 		mov rbx, 0x1
-		jmp putInDifSys
+		jmp putInDifSys	 	; putInDifSys ends parseSpecifier
 
 .l5:		cmp al, 's'
 		jne .l20
 		call nextArgument
 		mov rax, rbx
-		jmp callString
+		jmp callString		; putInDifSys ends parseSpecifier
 
 .l20:
 		ret	
 		
-
+;
+; Description: 
+;	moves next printf argument into rbx
+;
 nextArgument:	cmp r12, 5
 		jge .stackArgument
 		cmp r12, 0
@@ -148,7 +151,10 @@ nextArgument:	cmp r12, 5
 .endArgument:	inc r12
 		ret
 
-
+;
+; Description:
+;	puts decimal representation of rax into the output buffer
+;
 putDecimal:	push rdx
 		push rcx
 		
@@ -185,6 +191,9 @@ putDecimal:	push rdx
 ;	print(hex(rax))
 ;	// bl = 1
 ;	print(bin(rax))
+; Registers:
+;	r8 - mask to get first bl bytes
+;	r9 - power of 2 (r9=bl at the start of the function)
 ;
 putInDifSys: 	push rdx
 		push rcx
@@ -269,7 +278,10 @@ callString:	mov rbx, rax
 
 		ret
 
-
+;
+; Description:
+;	Puts char and releases buffer if its overflowed
+;
 putCharCheck:	call putchar
 		call checkBufferOverflow
 		ret
